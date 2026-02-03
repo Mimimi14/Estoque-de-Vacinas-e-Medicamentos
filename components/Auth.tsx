@@ -2,10 +2,15 @@
 import React, { useState } from 'react';
 import { supabase } from '../supabase';
 
-const Auth: React.FC = () => {
+interface AuthProps {
+  onLoginSuccess: (isReadOnly: boolean) => void;
+}
+
+const Auth: React.FC<AuthProps> = ({ onLoginSuccess }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [readOnlyMode, setReadOnlyMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -18,10 +23,11 @@ const Auth: React.FC = () => {
       if (isLogin) {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+        onLoginSuccess(readOnlyMode);
       } else {
         const { error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
-        alert('Cadastro realizado! Verifique seu e-mail para confirmação (se habilitado) ou tente fazer login.');
+        alert('Cadastro realizado! Agora você pode fazer login.');
         setIsLogin(true);
       }
     } catch (err: any) {
@@ -37,10 +43,7 @@ const Auth: React.FC = () => {
         <div className="bg-emerald-600 p-8 text-white text-center">
           <div className="flex justify-center mb-4">
             <svg viewBox="0 0 100 100" className="w-16 h-16" xmlns="http://www.w3.org/2000/svg">
-              <path 
-                fill="#e30613" 
-                d="M50,88.5 C50,88.5 10,62 10,35.5 C10,17 26.5,10 40,10 C46.5,10 50,13.5 50,16.5 C50,13.5 53.5,10 60,10 C73.5,10 90,17 90,35.5 C90,62 50,88.5 50,88.5 Z"
-              />
+              <path fill="#e30613" d="M50,88.5 C50,88.5 10,62 10,35.5 C10,17 26.5,10 40,10 C46.5,10 50,13.5 50,16.5 C50,13.5 53.5,10 60,10 C73.5,10 90,17 90,35.5 C90,62 50,88.5 50,88.5 Z"/>
               <text x="50%" y="44%" dominantBaseline="middle" textAnchor="middle" fill="white" fontSize="20" fontWeight="900">Ad'oro</text>
             </svg>
           </div>
@@ -78,30 +81,34 @@ const Auth: React.FC = () => {
               />
             </div>
 
-            {error && (
-              <div className="bg-red-50 text-red-600 p-3 rounded-lg text-xs font-bold border border-red-100 animate-in slide-in-from-top-2">
-                {error}
+            {isLogin && (
+              <div className="flex items-center space-x-3 p-3 bg-emerald-50 rounded-xl border border-emerald-100 cursor-pointer select-none" onClick={() => setReadOnlyMode(!readOnlyMode)}>
+                <input 
+                  type="checkbox" 
+                  checked={readOnlyMode} 
+                  onChange={() => {}} 
+                  className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-emerald-300"
+                />
+                <div>
+                  <p className="text-xs font-bold text-emerald-900">Acessar em Modo Leitura</p>
+                  <p className="text-[10px] text-emerald-600">Apenas visualização, sem permissão para alterar dados.</p>
+                </div>
               </div>
             )}
+
+            {error && <div className="bg-red-50 text-red-600 p-3 rounded-lg text-xs font-bold border border-red-100">{error}</div>}
 
             <button 
               type="submit"
               disabled={loading}
               className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold transition-all shadow-lg shadow-emerald-100 flex items-center justify-center disabled:opacity-50"
             >
-              {loading ? (
-                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-              ) : (
-                isLogin ? 'Entrar no Sistema' : 'Finalizar Cadastro'
-              )}
+              {loading ? <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div> : (isLogin ? 'Entrar no Sistema' : 'Finalizar Cadastro')}
             </button>
           </form>
 
           <div className="mt-8 text-center">
-            <button 
-              onClick={() => setIsLogin(!isLogin)}
-              className="text-sm font-bold text-emerald-600 hover:text-emerald-700 transition-colors"
-            >
+            <button onClick={() => setIsLogin(!isLogin)} className="text-sm font-bold text-emerald-600 hover:text-emerald-700 transition-colors">
               {isLogin ? 'Ainda não tem conta? Cadastre-se' : 'Já possui conta? Faça Login'}
             </button>
           </div>

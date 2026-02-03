@@ -7,9 +7,10 @@ interface SidebarProps {
   setActiveView: (view: ViewType) => void;
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
+  isReadOnly?: boolean;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, isOpen, setIsOpen }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, isOpen, setIsOpen, isReadOnly }) => {
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: 'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z' },
     { id: 'inventory', label: 'Estoque', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01' },
@@ -22,25 +23,17 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, isOpen, se
   return (
     <nav className={`fixed left-0 top-0 h-full w-64 bg-emerald-900 text-white shadow-xl z-20 border-r border-emerald-800 transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
       <div className="p-6 h-full flex flex-col">
-        {/* Cabeçalho alinhado à esquerda para dar espaço ao ícone na direita */}
-        <div className="relative flex items-center justify-start mb-10 min-h-[64px] pl-2">
+        <div className="relative flex items-center justify-between mb-10 min-h-[64px] pl-2">
           <div className="text-left">
             <span className="font-bold text-[11px] leading-[1.3] tracking-[0.15em] uppercase text-white block">
               ESTOQUE DE<br/>VACINAS E<br/>MEDICAMENTOS
             </span>
+            {isReadOnly && (
+              <span className="mt-1 bg-yellow-500 text-emerald-950 text-[8px] font-black px-1.5 py-0.5 rounded tracking-widest uppercase inline-block">MODO LEITURA</span>
+            )}
           </div>
-          
-          {/* Botão posicionado na extremidade direita (Seta Azul) */}
-          <button 
-            onClick={() => setIsOpen(false)}
-            className="absolute right-0 p-2 hover:bg-emerald-800 rounded-lg text-emerald-100 transition-colors"
-            title="Ocultar Menu"
-          >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <rect x="3" y="6" width="18" height="2" rx="1" fill="currentColor"/>
-              <rect x="3" y="11" width="18" height="2" rx="1" fill="currentColor"/>
-              <rect x="3" y="16" width="18" height="2" rx="1" fill="currentColor"/>
-            </svg>
+          <button onClick={() => setIsOpen(false)} className="p-2 hover:bg-emerald-800 rounded-lg text-emerald-100 transition-colors">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="3" y="6" width="18" height="2" rx="1" fill="currentColor"/><rect x="3" y="11" width="18" height="2" rx="1" fill="currentColor"/><rect x="3" y="16" width="18" height="2" rx="1" fill="currentColor"/></svg>
           </button>
         </div>
 
@@ -56,9 +49,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, isOpen, se
                   activeView === item.id ? 'bg-emerald-700 text-white shadow-lg' : 'text-emerald-100/80 hover:bg-emerald-800/80 hover:text-white'
                 }`}
               >
-                <svg className="w-5 h-5 opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={item.icon} />
-                </svg>
+                <svg className="w-5 h-5 opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={item.icon} /></svg>
                 <span className="font-semibold text-sm">{item.label}</span>
               </button>
             </li>
