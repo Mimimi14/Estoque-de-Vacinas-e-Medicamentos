@@ -22,18 +22,19 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, isOpen, se
   return (
     <nav className={`fixed left-0 top-0 h-full w-64 bg-emerald-900 text-white shadow-xl z-20 border-r border-emerald-800 transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
       <div className="p-6 h-full flex flex-col">
-        {/* Cabeçalho centralizado sem logo */}
-        <div className="relative flex flex-col items-center justify-center mb-10 min-h-[64px]">
-          <div className="text-center">
+        {/* Cabeçalho alinhado à esquerda para dar espaço ao ícone na direita */}
+        <div className="relative flex items-center justify-start mb-10 min-h-[64px] pl-2">
+          <div className="text-left">
             <span className="font-bold text-[11px] leading-[1.3] tracking-[0.15em] uppercase text-white block">
               ESTOQUE DE<br/>VACINAS E<br/>MEDICAMENTOS
             </span>
           </div>
           
-          {/* Botão posicionado à direita para não afetar o centro */}
+          {/* Botão posicionado na extremidade direita (Seta Azul) */}
           <button 
             onClick={() => setIsOpen(false)}
-            className="absolute -right-2 p-2 hover:bg-emerald-800 rounded-lg text-emerald-100 transition-colors lg:hidden"
+            className="absolute right-0 p-2 hover:bg-emerald-800 rounded-lg text-emerald-100 transition-colors"
+            title="Ocultar Menu"
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
               <rect x="3" y="6" width="18" height="2" rx="1" fill="currentColor"/>

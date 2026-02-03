@@ -375,8 +375,13 @@ const App: React.FC = () => {
       <main className={`flex-1 transition-all duration-300 ${isSidebarOpen ? 'lg:ml-64' : 'ml-0'} p-4 md:p-8 overflow-auto`}>
         <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center space-x-4">
+            {/* O botão do cabeçalho só aparece quando a sidebar está OCULTA (Seta Azul) */}
             {!isSidebarOpen && (
-              <button onClick={() => setIsSidebarOpen(true)} className="p-2 hover:bg-emerald-100 rounded-lg text-emerald-900 transition-all">
+              <button 
+                onClick={() => setIsSidebarOpen(true)} 
+                className="p-2 hover:bg-emerald-100 rounded-lg text-emerald-900 transition-all flex-shrink-0 animate-in fade-in zoom-in duration-200"
+                title="Mostrar Menu"
+              >
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                   <rect x="3" y="6" width="18" height="2" rx="1" fill="currentColor"/>
                   <rect x="3" y="11" width="18" height="2" rx="1" fill="currentColor"/>
