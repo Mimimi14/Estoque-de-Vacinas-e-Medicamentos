@@ -161,7 +161,7 @@ const FiscalCosts: React.FC<FiscalCostsProps> = ({
         <table className="w-full text-sm text-left">
           <thead className="bg-gray-50 text-gray-500 font-bold uppercase text-[10px] tracking-wider">
             <tr>
-              <th className="px-6 py-4 cursor-pointer hover:bg-gray-100 select-none" onClick={() => handleSort('name')}><div className="flex items-center uppercase">Item<SortIcon column="name" /></div></th>
+              <th className="px-6 py-4 cursor-pointer hover:bg-gray-100 select-none" onClick={() => handleSort('name')}><div className="flex items-center uppercase">Item / Fornecedor<SortIcon column="name" /></div></th>
               <th className="px-6 py-4 cursor-pointer hover:bg-gray-100 text-center select-none" onClick={() => handleSort('consumedUnits')}><div className="flex items-center justify-center uppercase">Consumo (Unid)<SortIcon column="consumedUnits" /></div></th>
               <th className="px-6 py-4 cursor-pointer hover:bg-gray-100 text-center select-none" onClick={() => handleSort('consumedDoses')}><div className="flex items-center justify-center uppercase">Consumo (Doses)<SortIcon column="consumedDoses" /></div></th>
               <th className="px-6 py-4 text-right cursor-pointer hover:bg-gray-100 select-none" onClick={() => handleSort('unitCost')}><div className="flex items-center justify-end uppercase">Custo Unid<SortIcon column="unitCost" /></div></th>
@@ -172,7 +172,13 @@ const FiscalCosts: React.FC<FiscalCostsProps> = ({
           <tbody className="divide-y divide-gray-50">
             {processedItems.map(entry => (
               <tr key={entry.id} className="hover:bg-gray-50/50 transition-colors">
-                <td className="px-6 py-4"><span className="font-bold text-gray-900 block uppercase">{entry.name}</span><span className="text-[9px] text-gray-400 uppercase">{entry.unit}</span></td>
+                <td className="px-6 py-4">
+                  <span className="font-bold text-gray-900 block uppercase">{entry.name}</span>
+                  <div className="flex items-center space-x-1">
+                    <span className="text-[9px] text-emerald-600 font-black uppercase">{entry.manufacturer || 'MSD'}</span>
+                    <span className="text-[9px] text-gray-400 uppercase"> - {entry.unit}</span>
+                  </div>
+                </td>
                 <td className="px-6 py-4 text-center font-bold text-gray-700">{entry.consumedUnits}</td>
                 <td className="px-6 py-4 text-center font-bold text-emerald-600 bg-emerald-50/20">{entry.consumedDoses.toLocaleString('pt-BR')}</td>
                 <td className="px-6 py-4 text-right font-mono text-xs">R$ {entry.unitCost.toFixed(2)}</td>

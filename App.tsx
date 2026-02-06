@@ -12,7 +12,6 @@ import Settings from './components/Settings';
 import Auth from './components/Auth';
 import Support from './components/Support';
 
-// ID de fallback para permitir edição sem login (Supabase RLS deve permitir este ID ou estar desativado para testes)
 const FALLBACK_USER_ID = 'dev-editor-2026';
 
 const App: React.FC = () => {
@@ -25,7 +24,6 @@ const App: React.FC = () => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
   
-  // Estados de Dados
   const [items, setItems] = useState<Item[]>([]);
   const [itemConfigs, setItemConfigs] = useState<ItemMonthlyConfig[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -36,35 +34,20 @@ const App: React.FC = () => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
 
-  // Monitora autenticação
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       const savedReadOnly = localStorage.getItem('sge_readonly') === 'true';
       setIsReadOnly(savedReadOnly);
     });
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
     });
-
     return () => subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
-        setIsUserMenuOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  // CARREGAMENTO: Usa o session.user.id se logado, caso contrário usa o FALLBACK_USER_ID
-  useEffect(() => {
     const userId = session?.user?.id || FALLBACK_USER_ID;
-
     const fetchData = async () => {
       setIsLoaded(false);
       try {
@@ -84,8 +67,22 @@ const App: React.FC = () => {
           supabase.from('monthly_stats').select('*').eq('user_id', userId)
         ]);
 
-        setItems(itemsData || []);
-        setItemConfigs(configsData || []);
+        let finalItems = itemsData || [];
+        let finalConfigs = configsData || [];
+
+        // Adicionar Innovax ND se o catálogo estiver vazio ou se não existir o item específico
+        const hasInnovax = finalItems.some(i => i.name === 'Innovax ND');
+        if (!hasInnovax) {
+          const defaultItem = { id: 'innovax-nd-seed', name: 'Innovax ND', manufacturer: 'MSD', unit: 'Ampola', dosage: 4000 };
+          finalItems = [defaultItem, ...finalItems];
+          // Adicionar configs para todos os meses para o item default
+          for (let m = 0; m < 12; m++) {
+            finalConfigs.push({ itemId: defaultItem.id, monthIndex: m, averageCost: 450, minStock: 100 });
+          }
+        }
+
+        setItems(finalItems);
+        setItemConfigs(finalConfigs);
         setOrders(ordersData || []);
         setInventoryEntries(inventoryData || []);
         
@@ -104,12 +101,11 @@ const App: React.FC = () => {
         setMonthlyProduction(prodMap);
 
       } catch (error) {
-        console.error("Erro na sincronização de dados:", error);
+        console.error("Erro na sincronização:", error);
       } finally {
         setIsLoaded(true);
       }
     };
-
     fetchData();
   }, [session]);
 
@@ -125,12 +121,15 @@ const App: React.FC = () => {
         let prevMonthFinal = 0;
         if (m > 0) prevMonthFinal = chain[item.id][m-1]?.final || 0;
         const initial = (entry?.manualInitialStock !== undefined && entry?.manualInitialStock !== null) ? entry.manualInitialStock : prevMonthFinal;
+        
         let lastWeekIdx = -1;
         for (let i = 3; i >= 0; i--) { if (entryWeeks[i] !== null && entryWeeks[i] !== undefined) { lastWeekIdx = i; break; } }
+        
         const flatReceived = orders.flatMap(o => o.status === OrderStatus.RECEIVED ? o.items.filter(oi => oi.itemId === item.id && oi.actualDate) : []).filter(oi => {
            const d = new Date(oi.actualDate! + 'T12:00:00');
            return d.getMonth() === m && d.getFullYear() === selectedYear;
         });
+
         if (lastWeekIdx === -1) {
           const totalReceived = flatReceived.reduce((sum, oi) => sum + oi.quantity, 0);
           chain[item.id][m] = { initial, final: initial + totalReceived, consumed: 0 };
@@ -156,11 +155,13 @@ const App: React.FC = () => {
     if (isReadOnly) return;
     setIsSyncing(true);
     const userId = session?.user?.id || FALLBACK_USER_ID;
-    await supabase.from('inventory_entries').upsert({ item_id: itemId, month_index: month, year: selectedYear, weeks: weeks, manual_initial_stock: manualInitial, user_id: userId });
+    const existingEntry = inventoryEntries.find(e => e.itemId === itemId && e.monthIndex === month && (e as any).year === selectedYear);
+    const finalManualInitial = manualInitial !== undefined ? manualInitial : (existingEntry?.manualInitialStock ?? null);
+    await supabase.from('inventory_entries').upsert({ item_id: itemId, month_index: month, year: selectedYear, weeks: weeks, manual_initial_stock: finalManualInitial, user_id: userId });
     setInventoryEntries(prev => {
       const idx = prev.findIndex(e => e.itemId === itemId && e.monthIndex === month && (e as any).year === selectedYear);
       const next = [...prev];
-      const newEntry = { itemId, monthIndex: month, year: selectedYear, weeks, manualInitialStock: manualInitial ?? undefined } as any;
+      const newEntry = { itemId, monthIndex: month, year: selectedYear, weeks, manualInitialStock: finalManualInitial ?? undefined } as any;
       if (idx > -1) next[idx] = newEntry; else next.push(newEntry);
       return next;
     });
@@ -194,9 +195,7 @@ const App: React.FC = () => {
     if (isReadOnly) return;
     setIsSyncing(true);
     const userId = session?.user?.id || FALLBACK_USER_ID;
-    const itemsToSave = newItems.map(i => ({ ...i, user_id: userId }));
-    const configsToSave = newConfigs.map(c => ({ ...c, user_id: userId }));
-    await Promise.all([supabase.from('items').upsert(itemsToSave), supabase.from('item_configs').upsert(configsToSave)]);
+    await Promise.all([supabase.from('items').upsert(newItems.map(i => ({ ...i, user_id: userId }))), supabase.from('item_configs').upsert(newConfigs.map(c => ({ ...c, user_id: userId })))]);
     setItems(newItems); setItemConfigs(newConfigs);
     setIsSyncing(false);
   };
@@ -205,23 +204,10 @@ const App: React.FC = () => {
     if (isReadOnly) return;
     setIsSyncing(true);
     const userId = session?.user?.id || FALLBACK_USER_ID;
-    const ordersToSave = newOrders.map(o => ({ ...o, user_id: userId }));
-    await supabase.from('orders').upsert(ordersToSave);
+    await supabase.from('orders').upsert(newOrders.map(o => ({ ...o, user_id: userId })));
     setOrders(newOrders);
     setIsSyncing(false);
   };
-
-  const handleDeleteOrder = async (orderId: string) => {
-    if (isReadOnly) return;
-    setIsSyncing(true);
-    const userId = session?.user?.id || FALLBACK_USER_ID;
-    await supabase.from('orders').delete().eq('id', orderId).eq('user_id', userId);
-    setOrders(prev => prev.filter(o => o.id !== orderId));
-    setIsSyncing(false);
-  };
-
-  // Login desativado por agora, conforme solicitado pelo usuário
-  // if (!session) return <Auth onLoginSuccess={(ro) => { setIsReadOnly(ro); localStorage.setItem('sge_readonly', String(ro)); }} />;
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -235,40 +221,21 @@ const App: React.FC = () => {
           </div>
           <div className="relative" ref={userMenuRef}>
             <button onClick={() => setIsUserMenuOpen(!isUserMenuOpen)} className="flex items-center space-x-4 bg-white p-2 rounded-lg shadow-sm border border-emerald-100 hover:bg-emerald-50 transition-colors">
-               <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center text-white font-bold">
-                 {session ? session.user.email?.charAt(0).toUpperCase() : 'D'}
-               </div>
+               <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center text-white font-bold">{session ? session.user.email?.charAt(0).toUpperCase() : 'D'}</div>
                <div className="text-right hidden sm:block">
-                 <p className="text-sm font-semibold text-gray-700">
-                   {session ? session.user.email?.split('@')[0] : 'Modo Edição / Dev'}
-                 </p>
-                 <p className="text-xs text-gray-400">
-                   {isReadOnly ? 'Acesso Leitura' : 'Acesso Editor'}
-                 </p>
+                 <p className="text-sm font-semibold text-gray-700">{session ? session.user.email?.split('@')[0] : 'Modo Edição / Dev'}</p>
+                 <p className="text-xs text-gray-400">{isReadOnly ? 'Acesso Leitura' : 'Acesso Editor'}</p>
                </div>
-               <svg className={`w-4 h-4 text-gray-400 transition-transform ${isUserMenuOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
             </button>
-            {isUserMenuOpen && (
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-[100] animate-in fade-in slide-in-from-top-2 duration-200">
-                {session ? (
-                   <button onClick={() => supabase.auth.signOut()} className="w-full flex items-center space-x-3 px-4 py-2.5 text-red-600 hover:bg-red-50 transition-colors font-bold text-sm">
-                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
-                     <span>Sair do Sistema</span>
-                   </button>
-                ) : (
-                  <p className="px-4 py-2 text-xs text-gray-400 italic">Ambiente de desenvolvimento ativo.</p>
-                )}
-              </div>
-            )}
           </div>
         </header>
         {!isLoaded ? (
-          <div className="flex flex-col items-center justify-center h-64 space-y-4"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div><p className="text-emerald-900 font-medium italic">Sincronizando com Banco de Dados...</p></div>
+          <div className="flex flex-col items-center justify-center h-64 space-y-4"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div><p className="text-emerald-900 font-medium italic">Sincronizando...</p></div>
         ) : (
           <div className="animate-in fade-in duration-500">
             {activeView === 'dashboard' && <Dashboard items={items} itemConfigs={itemConfigs} orders={orders} stockChain={calculateStockChain} inventoryEntries={inventoryEntries} selectedYear={selectedYear} selectedMonth={selectedMonths[0] ?? 0} setSelectedYear={setSelectedYear} setSelectedMonth={(m) => setSelectedMonths([m])} />}
             {activeView === 'inventory' && <InventoryTable items={items} itemConfigs={itemConfigs} selectedMonths={selectedMonths} setSelectedMonths={setSelectedMonths} selectedYear={selectedYear} setSelectedYear={setSelectedYear} orders={orders} stockChain={calculateStockChain} inventoryEntries={inventoryEntries} onUpdateEntry={updateInventoryEntry} allMonthlyDates={monthlyDates} onUpdateMonthlyDate={updateMonthlyDate} onReorderItems={(newItems) => handleUpdateItems(newItems, itemConfigs)} readOnly={isReadOnly} />}
-            {activeView === 'orders' && <OrderManagement items={items} orders={orders} onAddOrder={(o) => handleOrdersChange([...orders, o])} onUpdateOrder={(updated) => handleOrdersChange(orders.map(o => o.id === updated.id ? updated : o))} onDeleteOrder={handleDeleteOrder} readOnly={isReadOnly} />}
+            {activeView === 'orders' && <OrderManagement items={items} orders={orders} onAddOrder={(o) => handleOrdersChange([...orders, o])} onUpdateOrder={(updated) => handleOrdersChange(orders.map(o => o.id === updated.id ? updated : o))} onDeleteOrder={(id) => handleOrdersChange(orders.filter(o => o.id !== id))} readOnly={isReadOnly} />}
             {activeView === 'fiscal' && <FiscalCosts items={items} itemConfigs={itemConfigs} selectedMonth={selectedMonths[0] ?? 0} setSelectedMonth={(m) => setSelectedMonths([m])} selectedYear={selectedYear} setSelectedYear={setSelectedYear} stockChain={calculateStockChain} inventoryEntries={inventoryEntries} monthlyProduction={monthlyProduction} updateMonthlyProduction={updateMonthlyProduction} isReadOnly={isReadOnly} />}
             {activeView === 'settings' && <Settings items={items} itemConfigs={itemConfigs} onUpdateData={handleUpdateItems} selectedMonth={selectedMonths[0] ?? 0} setSelectedMonth={(m) => setSelectedMonths([m])} readOnly={isReadOnly} />}
             {activeView === 'support' && <Support />}

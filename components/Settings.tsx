@@ -11,11 +11,12 @@ interface SettingsProps {
   readOnly?: boolean;
 }
 
-const MONTHS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+const MONTHS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'AGOSTO', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
 const Settings: React.FC<SettingsProps> = ({ items, itemConfigs, selectedMonth, setSelectedMonth, onUpdateData, readOnly }) => {
   const [name, setName] = useState('');
   const [unit, setUnit] = useState('');
+  const [manufacturer, setManufacturer] = useState('');
   const [cost, setCost] = useState('');
   const [min, setMin] = useState('');
   const [dosage, setDosage] = useState('');
@@ -26,6 +27,7 @@ const Settings: React.FC<SettingsProps> = ({ items, itemConfigs, selectedMonth, 
   const resetForm = () => {
     setName('');
     setUnit('');
+    setManufacturer('');
     setCost('');
     setMin('');
     setDosage('');
@@ -37,6 +39,7 @@ const Settings: React.FC<SettingsProps> = ({ items, itemConfigs, selectedMonth, 
     setEditingItemId(item.id);
     setName(item.name);
     setUnit(item.unit);
+    setManufacturer(item.manufacturer || '');
     setDosage(item.dosage.toString());
     setCost(cfg.averageCost.toString());
     setMin(cfg.minStock.toString());
@@ -49,7 +52,7 @@ const Settings: React.FC<SettingsProps> = ({ items, itemConfigs, selectedMonth, 
     if (editingItemId) {
       const updatedItems = items.map(it => 
         it.id === editingItemId 
-          ? { ...it, name, unit, dosage: parseFloat(dosage) } 
+          ? { ...it, name, unit, manufacturer, dosage: parseFloat(dosage) } 
           : it
       );
       
@@ -62,7 +65,7 @@ const Settings: React.FC<SettingsProps> = ({ items, itemConfigs, selectedMonth, 
       onUpdateData(updatedItems, updatedConfigs);
     } else {
       const id = crypto.randomUUID();
-      const newItem = { id, name, unit, dosage: parseFloat(dosage) };
+      const newItem = { id, name, unit, manufacturer, dosage: parseFloat(dosage) };
       const nConfigs = [...itemConfigs];
       for (let m = 0; m < 12; m++) {
         nConfigs.push({ itemId: id, monthIndex: m, averageCost: parseFloat(cost), minStock: parseInt(min) });
@@ -107,31 +110,35 @@ const Settings: React.FC<SettingsProps> = ({ items, itemConfigs, selectedMonth, 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-gray-400 uppercase ml-1">Nome do Item</label>
-                <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Innovax ND" className="w-full border border-gray-200 p-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500" required />
+                <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="" className="w-full border border-gray-200 p-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-medium" required />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-gray-400 uppercase ml-1">Fornecedor / Laboratório</label>
+                <input type="text" value={manufacturer} onChange={(e) => setManufacturer(e.target.value)} placeholder="Ex: MSD, Ceva, Zoetis" className="w-full border border-gray-200 p-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-medium" />
               </div>
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-gray-400 uppercase ml-1">Apresentação</label>
-                <input type="text" value={unit} onChange={(e) => setUnit(e.target.value)} placeholder="Ex: Ampola (4000 doses)" className="w-full border border-gray-200 p-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500" required />
+                <input type="text" value={unit} onChange={(e) => setUnit(e.target.value)} placeholder="Ex: Frasco 1000 doses" className="w-full border border-gray-200 p-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-medium" required />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-gray-400 uppercase ml-1">Doses/Unid</label>
-                  <input type="number" value={dosage} onChange={(e) => setDosage(e.target.value)} placeholder="4000" className="w-full border border-gray-200 p-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500" required />
+                  <input type="number" value={dosage} onChange={(e) => setDosage(e.target.value)} placeholder="" className="w-full border border-gray-200 p-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-medium" required />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-gray-400 uppercase ml-1">Custo Unit.</label>
-                  <input type="number" step="0.01" value={cost} onChange={(e) => setCost(e.target.value)} placeholder="0.00" className="w-full border border-gray-200 p-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500" required />
+                  <input type="number" step="0.01" value={cost} onChange={(e) => setCost(e.target.value)} placeholder="0.00" className="w-full border border-gray-200 p-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-medium" required />
                 </div>
               </div>
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-gray-400 uppercase ml-1">Estoque Mínimo</label>
-                <input type="number" value={min} onChange={(e) => setMin(e.target.value)} placeholder="1600" className="w-full border border-gray-200 p-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500" required />
+                <input type="number" value={min} onChange={(e) => setMin(e.target.value)} placeholder="" className="w-full border border-gray-200 p-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-medium" required />
               </div>
               <div className="flex gap-2 pt-2">
                 {editingItemId && (
                   <button type="button" onClick={resetForm} className="flex-1 bg-gray-100 text-gray-600 py-3 rounded-xl font-bold hover:bg-gray-200 transition-colors">Cancelar</button>
                 )}
-                <button type="submit" className="flex-[2] bg-emerald-600 text-white py-3 rounded-xl font-bold hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-100">
+                <button type="submit" className="flex-[2] bg-emerald-600 text-white py-3 rounded-xl font-bold hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-100 uppercase tracking-widest text-xs">
                   {editingItemId ? 'Salvar Alterações' : 'Cadastrar Item'}
                 </button>
               </div>
@@ -143,7 +150,7 @@ const Settings: React.FC<SettingsProps> = ({ items, itemConfigs, selectedMonth, 
           <table className="w-full text-sm text-left">
             <thead className="bg-gray-50 text-gray-500 font-bold uppercase text-[10px] tracking-wider">
               <tr>
-                <th className="px-6 py-4">Item</th>
+                <th className="px-6 py-4">Item / Fornecedor</th>
                 <th className="px-6 py-4">Apresentação</th>
                 <th className="px-6 py-4">Custo</th>
                 <th className="px-6 py-4 text-center">Mínimo</th>
@@ -157,6 +164,7 @@ const Settings: React.FC<SettingsProps> = ({ items, itemConfigs, selectedMonth, 
                   <tr key={i.id} className={`hover:bg-gray-50/50 transition-colors ${editingItemId === i.id ? 'bg-emerald-50/50' : ''}`}>
                     <td className="px-6 py-4">
                       <span className="font-bold text-gray-900 block uppercase tracking-tight">{i.name}</span>
+                      {i.manufacturer && <span className="text-[10px] text-emerald-600 font-black uppercase tracking-widest opacity-70">{i.manufacturer}</span>}
                     </td>
                     <td className="px-6 py-4 text-gray-500 text-xs">{i.unit} <span className="opacity-70">({i.dosage} doses)</span></td>
                     <td className="px-6 py-4 font-mono text-emerald-700 font-semibold">R$ {cfg.averageCost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
@@ -184,11 +192,6 @@ const Settings: React.FC<SettingsProps> = ({ items, itemConfigs, selectedMonth, 
                   </tr>
                 );
               })}
-              {items.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-gray-400 italic">Nenhum item cadastrado no catálogo.</td>
-                </tr>
-              )}
             </tbody>
           </table>
         </div>
